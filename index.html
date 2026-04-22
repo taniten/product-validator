@@ -10,10 +10,9 @@
     <main class="app-shell">
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">Ecommerce MVP</p>
-        <h1 id="page-title">Validador de Producto</h1>
+        <h1 id="page-title">¿Vale la pena testear este producto?</h1>
         <p>
-          Evalua rapidamente si un producto merece un test comercial segun margen,
-          demanda, competencia y complejidad operativa.
+          Cargá los datos y recibí una decisión clara con diagnóstico y acciones concretas.
         </p>
       </section>
 
@@ -94,67 +93,98 @@
         </form>
 
         <aside id="result-panel" class="result-panel" hidden aria-live="polite">
-          <div class="score-block">
-            <span class="score-label">Score total</span>
-            <strong><span id="score-value">0</span>/100</strong>
-          </div>
+          <section class="decision-section verdict-section" aria-labelledby="verdict-title">
+            <div class="section-heading">
+              <h2 id="verdict-title">Veredicto</h2>
+              <span class="score-pill"><span id="score-value">0</span>/100</span>
+            </div>
 
-          <div class="verdict">
-            <span id="classification-value">-</span>
-            <p id="result-description"></p>
-          </div>
+            <div class="verdict">
+              <span id="classification-value">-</span>
+              <p id="result-description"></p>
+            </div>
 
-          <div class="metrics">
             <div class="metric-line">
               <span>Margen bruto</span>
               <strong id="margin-value">0.0%</strong>
             </div>
+          </section>
 
+          <section class="decision-section" aria-labelledby="diagnosis-title">
+            <div class="section-heading">
+              <h2 id="diagnosis-title">Diagnóstico</h2>
+            </div>
+
+            <ul id="alert-list" class="alert-list"></ul>
+            <p id="diagnosis-summary"></p>
             <div class="component-list" aria-label="Componentes del score">
               <div>
-                <span>Margen</span>
+                <div class="component-label">
+                  <span>Margen</span>
+                  <strong id="component-margin-value">0</strong>
+                </div>
                 <div class="bar-track">
                   <span id="component-margin" class="bar-fill" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
                 </div>
               </div>
               <div>
-                <span>Demanda</span>
+                <div class="component-label">
+                  <span>Demanda</span>
+                  <strong id="component-demand-value">0</strong>
+                </div>
                 <div class="bar-track">
                   <span id="component-demand" class="bar-fill" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
                 </div>
               </div>
               <div>
-                <span>Competencia</span>
+                <div class="component-label">
+                  <span>Competencia</span>
+                  <strong id="component-competition-value">0</strong>
+                </div>
                 <div class="bar-track">
                   <span id="component-competition" class="bar-fill" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
                 </div>
               </div>
               <div>
-                <span>Complejidad</span>
+                <div class="component-label">
+                  <span>Complejidad</span>
+                  <strong id="component-complexity-value">0</strong>
+                </div>
                 <div class="bar-track">
                   <span id="component-complexity" class="bar-fill" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
                 </div>
               </div>
             </div>
-          </div>
-
-          <section class="insight-section" aria-labelledby="diagnosis-title">
-            <h2 id="diagnosis-title">Diagnostico</h2>
-            <p id="diagnosis-summary"></p>
             <ul id="diagnosis-details" class="plain-list"></ul>
-
-            <h3>Puntos debiles</h3>
-            <ul id="weak-points-list" class="weak-list"></ul>
           </section>
 
-          <section class="insight-section" aria-labelledby="recommendations-title">
-            <h2 id="recommendations-title">Recomendaciones</h2>
+          <section class="decision-section" aria-labelledby="risks-title">
+            <div class="section-heading">
+              <h2 id="risks-title">Riesgos principales</h2>
+            </div>
+            <ul id="risk-list" class="risk-list"></ul>
+          </section>
+
+          <section class="decision-section" aria-labelledby="recommendations-title">
+            <div class="section-heading">
+              <h2 id="recommendations-title">Recomendaciones</h2>
+            </div>
             <ul id="recommendations-list" class="recommendation-list"></ul>
+            <div class="quick-simulation" aria-label="Simulación rápida">
+              <button type="button" id="simulate-price-button">Probar subir precio +10%</button>
+              <button type="button" id="simulate-cost-button">Probar bajar costo -10%</button>
+            </div>
           </section>
 
-          <section class="insight-section" aria-labelledby="simulation-title">
-            <h2 id="simulation-title">Simulacion</h2>
-            <ul id="simulation-cards" class="simulation-list"></ul>
+          <section class="decision-section" aria-labelledby="plan-title">
+            <div class="section-heading">
+              <h2 id="plan-title">Plan sugerido</h2>
+              <span id="plan-stance" class="plan-stance">-</span>
+            </div>
+            <div class="plan-card">
+              <strong id="plan-name">-</strong>
+              <p id="plan-description"></p>
+            </div>
           </section>
         </aside>
       </section>

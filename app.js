@@ -6,30 +6,62 @@ const marginValue = document.querySelector("#margin-value");
 const resultDescription = document.querySelector("#result-description");
 const diagnosisSummary = document.querySelector("#diagnosis-summary");
 const diagnosisDetails = document.querySelector("#diagnosis-details");
-const weakPointsList = document.querySelector("#weak-points-list");
+const alertList = document.querySelector("#alert-list");
+const riskList = document.querySelector("#risk-list");
 const recommendationsList = document.querySelector("#recommendations-list");
-const simulationCards = document.querySelector("#simulation-cards");
+const planStance = document.querySelector("#plan-stance");
+const planName = document.querySelector("#plan-name");
+const planDescription = document.querySelector("#plan-description");
+const simulatePriceButton = document.querySelector("#simulate-price-button");
+const simulateCostButton = document.querySelector("#simulate-cost-button");
 const componentBars = {
   margin: document.querySelector("#component-margin"),
   demand: document.querySelector("#component-demand"),
   competition: document.querySelector("#component-competition"),
   complexity: document.querySelector("#component-complexity"),
 };
+const componentValues = {
+  margin: document.querySelector("#component-margin-value"),
+  demand: document.querySelector("#component-demand-value"),
+  competition: document.querySelector("#component-competition-value"),
+  complexity: document.querySelector("#component-complexity-value"),
+};
 const salePriceInput = form.elements.salePrice;
-let lastInput = null;
+const productCostInput = form.elements.productCost;
+let hasEvaluated = false;
 
 function getNumber(formData, fieldName) {
   return Number(formData.get(fieldName));
+}
+
+function formatMoney(value) {
+  return value.toFixed(2);
 }
 
 function formatPercent(value) {
   return `${value.toFixed(1)}%`;
 }
 
+function getCurrentInput() {
+  const formData = new FormData(form);
+
+  return {
+    salePrice: getNumber(formData, "salePrice"),
+    productCost: getNumber(formData, "productCost"),
+    shippingCost: getNumber(formData, "shippingCost"),
+    competition: getNumber(formData, "competition"),
+    demand: getNumber(formData, "demand"),
+    complexity: getNumber(formData, "complexity"),
+  };
+}
+
 function updateComponentBar(name, value) {
+  const roundedValue = Math.round(value);
   const bar = componentBars[name];
-  bar.style.width = `${Math.round(value)}%`;
-  bar.setAttribute("aria-valuenow", String(Math.round(value)));
+
+  bar.style.width = `${roundedValue}%`;
+  bar.setAttribute("aria-valuenow", String(roundedValue));
+  componentValues[name].textContent = `${roundedValue}/100`;
 }
 
 function renderList(container, items, renderItem) {
@@ -45,19 +77,32 @@ function createTextListItem(text) {
   return item;
 }
 
-function renderWeakPoints(items) {
-  const weakPoints =
-    items.length > 0
-      ? items
-      : [{ label: "Sin alertas criticas", text: "Las variables principales estan dentro de rangos razonables." }];
-
-  renderList(weakPointsList, weakPoints, (weakPoint) => {
+function renderRisks(items) {
+  renderList(riskList, items, (risk) => {
     const item = document.createElement("li");
     const title = document.createElement("strong");
     const text = document.createElement("span");
 
-    title.textContent = weakPoint.label;
-    text.textContent = weakPoint.text;
+    item.dataset.severity = risk.severity;
+    title.textContent = risk.label;
+    text.textContent = risk.text;
+    item.append(title, text);
+
+    return item;
+  });
+}
+
+function renderAlerts(items) {
+  alertList.hidden = items.length === 0;
+
+  renderList(alertList, items, (alert) => {
+    const item = document.createElement("li");
+    const title = document.createElement("strong");
+    const text = document.createElement("span");
+
+    item.dataset.severity = alert.severity;
+    title.textContent = alert.label;
+    text.textContent = alert.text;
     item.append(title, text);
 
     return item;
@@ -81,40 +126,10 @@ function renderRecommendations(items) {
   });
 }
 
-function renderSimulation(baseInput, baseScore) {
-  const options = [
-    { label: "-10%", multiplier: 0.9 },
-    { label: "+10%", multiplier: 1.1 },
-  ];
-
-  renderList(simulationCards, options, (option) => {
-    const simulated = window.productScoring.simulatePrice(baseInput, option.multiplier);
-    const item = document.createElement("li");
-    const label = document.createElement("span");
-    const score = document.createElement("strong");
-    const detail = document.createElement("p");
-    const delta = document.createElement("em");
-    const applyButton = document.createElement("button");
-    const simulatedPrice = baseInput.salePrice * option.multiplier;
-    const scoreDelta = simulated.score - baseScore;
-    const deltaPrefix = scoreDelta > 0 ? "+" : "";
-
-    item.className = "simulation-card";
-    item.dataset.tone = simulated.classification.tone;
-    label.textContent = `Precio ${option.label}: ${simulatedPrice.toFixed(2)}`;
-    score.textContent = `${simulated.score}/100`;
-    delta.textContent = `${deltaPrefix}${scoreDelta} pts vs actual`;
-    detail.textContent = `${simulated.classification.label} con margen ${formatPercent(simulated.marginPercent)}`;
-    applyButton.type = "button";
-    applyButton.textContent = "Aplicar precio";
-    applyButton.addEventListener("click", () => {
-      salePriceInput.value = simulatedPrice.toFixed(2);
-      form.requestSubmit();
-    });
-
-    item.append(label, score, delta, detail, applyButton);
-    return item;
-  });
+function renderPlan(plan) {
+  planStance.textContent = plan.stance;
+  planName.textContent = plan.title;
+  planDescription.textContent = plan.text;
 }
 
 function renderResult(result) {
@@ -127,30 +142,50 @@ function renderResult(result) {
   resultDescription.textContent = result.classification.description;
   diagnosisSummary.textContent = result.diagnosis.summary;
 
+  renderAlerts(result.alerts);
   renderList(diagnosisDetails, result.diagnosis.details, createTextListItem);
-  renderWeakPoints(result.weakPoints);
+  renderRisks(result.risks);
   renderRecommendations(result.recommendations);
-  renderSimulation(lastInput, result.score);
+  renderPlan(result.plan);
 
   Object.entries(result.components).forEach(([name, value]) => {
     updateComponentBar(name, value);
   });
 }
 
+function evaluateCurrentForm() {
+  const result = window.productScoring.evaluateProduct(getCurrentInput());
+  hasEvaluated = true;
+  renderResult(result);
+}
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
+  evaluateCurrentForm();
+});
 
-  const formData = new FormData(form);
-  lastInput = {
-    salePrice: getNumber(formData, "salePrice"),
-    productCost: getNumber(formData, "productCost"),
-    shippingCost: getNumber(formData, "shippingCost"),
-    competition: getNumber(formData, "competition"),
-    demand: getNumber(formData, "demand"),
-    complexity: getNumber(formData, "complexity"),
-  };
+form.addEventListener("input", () => {
+  if (hasEvaluated && form.checkValidity()) {
+    evaluateCurrentForm();
+  }
+});
 
-  const result = window.productScoring.evaluateProduct(lastInput);
+simulatePriceButton.addEventListener("click", () => {
+  if (!form.reportValidity()) {
+    return;
+  }
 
-  renderResult(result);
+  const simulatedPrice = getCurrentInput().salePrice * 1.1;
+  salePriceInput.value = formatMoney(simulatedPrice);
+  evaluateCurrentForm();
+});
+
+simulateCostButton.addEventListener("click", () => {
+  if (!form.reportValidity()) {
+    return;
+  }
+
+  const simulatedCost = getCurrentInput().productCost * 0.9;
+  productCostInput.value = formatMoney(simulatedCost);
+  evaluateCurrentForm();
 });

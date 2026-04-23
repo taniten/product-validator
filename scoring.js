@@ -9,17 +9,17 @@
   const CLASSIFICATIONS = {
     test: {
       label: "TESTEAR YA",
-      description: "El producto tiene condiciones suficientes para avanzar con un test real, cuidando el presupuesto.",
+      description: "Buen punto de partida para un test real y controlado.",
       tone: "success",
     },
     watch: {
       label: "AJUSTAR ANTES",
-      description: "Hay potencial, pero el test necesita una mejora concreta antes de invertir.",
+      description: "Hay potencial, pero falta corregir una variable clave.",
       tone: "warning",
     },
     reject: {
       label: "DESCARTAR",
-      description: "Con los datos actuales, el aprendizaje probable no justifica el costo del test.",
+      description: "No conviene invertir en este test con los datos actuales.",
       tone: "danger",
     },
   };
@@ -38,8 +38,7 @@
       return 0;
     }
 
-    const grossProfit = salePrice - productCost - shippingCost;
-    return (grossProfit / salePrice) * 100;
+    return ((salePrice - productCost - shippingCost) / salePrice) * 100;
   }
 
   function scoreMargin(marginPercent) {
@@ -134,52 +133,67 @@
       !Number.isFinite(input.shippingCost) ||
       input.salePrice <= 0
     ) {
-      alerts.push({
-        severity: "critical",
-        label: "Datos incompletos",
-        text: "Revisá precio, costo de producto y costo de envío antes de interpretar el score.",
-      });
-
-      return alerts;
+      return [
+        {
+          key: "incomplete",
+          severity: "critical",
+          label: "Confirmar costos",
+          text: "Falta precio o costos básicos.",
+        },
+      ];
     }
 
     if (totalCost >= input.salePrice) {
       alerts.push({
+        key: "incoherent",
         severity: "critical",
-        label: "Margen negativo",
-        text: "Los costos igualan o superan el precio de venta. El producto no es viable con estos datos.",
+        label: "Corregir datos",
+        text: "Los costos igualan o superan el precio.",
       });
     }
 
     if (productCostRatio > 0 && productCostRatio < 0.1) {
       alerts.push({
+        key: "costs",
         severity: "warning",
-        label: "Costo de producto muy bajo",
-        text: "El costo del producto es menor al 10% del precio. Confirmá que no falten comisiones, packaging, impuestos o merma.",
+        label: "Confirmar costos",
+        text: "Puede faltar comisión, packaging o impuesto.",
       });
     }
 
     if (costRatio > 0 && costRatio < 0.18) {
       alerts.push({
+        key: "costs",
         severity: "warning",
-        label: "Costos totales inusualmente bajos",
-        text: "Producto más envío representan menos del 18% del precio. El score puede estar inflado si falta algún costo.",
+        label: "Confirmar costos",
+        text: "Producto + envío parecen incompletos.",
       });
     }
 
     if (marginPercent >= 80) {
       alerts.push({
+        key: "price",
         severity: "warning",
-        label: "Margen extremadamente alto",
-        text: "Un margen mayor al 80% es posible, pero poco común. Validá precio de mercado y costos reales antes de decidir.",
+        label: "Revisar precio final",
+        text: "Margen muy alto: validá precio real de mercado.",
       });
     }
 
     if (input.shippingCost === 0) {
       alerts.push({
+        key: "costs",
         severity: "info",
-        label: "Envío en cero",
-        text: "Si el envío lo absorbés vos, cargalo como costo. Si lo paga el cliente, este dato está bien.",
+        label: "Confirmar costos",
+        text: "Si absorbés envío, cargalo como costo.",
+      });
+    }
+
+    if (input.demand <= 2) {
+      alerts.push({
+        key: "demand",
+        severity: "info",
+        label: "Validar demanda",
+        text: "Buscá señal externa antes de comprar stock.",
       });
     }
 
@@ -194,21 +208,21 @@
         key: "margin",
         severity: "critical",
         label: "Margen crítico",
-        text: `El margen bruto es ${marginPercent.toFixed(1)}%. Queda poco o ningún espacio para pauta, comisiones, descuentos o devoluciones.`,
+        text: `${marginPercent.toFixed(1)}% bruto. No absorbe pauta.`,
       });
     } else if (marginPercent < 35) {
       risks.push({
         key: "margin",
         severity: "moderate",
         label: "Margen ajustado",
-        text: `El margen bruto es ${marginPercent.toFixed(1)}%. Puede alcanzar para aprender, pero obliga a un test chico y muy controlado.`,
+        text: `${marginPercent.toFixed(1)}% bruto. Test chico.`,
       });
     } else if (marginPercent >= 80) {
       risks.push({
         key: "data-quality",
         severity: "moderate",
         label: "Margen difícil de sostener",
-        text: "El margen es tan alto que el principal riesgo es que el dato esté incompleto o que el precio no sea aceptado por el mercado.",
+        text: "Puede haber costos faltantes.",
       });
     }
 
@@ -217,14 +231,14 @@
         key: "demand",
         severity: "critical",
         label: "Demanda débil",
-        text: "La demanda estimada puede hacer lento el aprendizaje y limitar el volumen de ventas del test.",
+        text: "Puede no generar volumen.",
       });
     } else if (input.demand === 3) {
       risks.push({
         key: "demand",
         severity: "moderate",
-        label: "Demanda todavía no probada",
-        text: "La demanda es media: el producto puede funcionar, pero conviene testear mensajes y audiencias antes de comprar stock grande.",
+        label: "Demanda media",
+        text: "Validá audiencia antes de stock.",
       });
     }
 
@@ -233,21 +247,21 @@
         key: "competition",
         severity: "critical",
         label: "Competencia muy alta",
-        text: "El mercado parece saturado. Sin una oferta distinta, el costo de adquisición puede comerse el margen.",
+        text: "Necesita oferta muy distinta.",
       });
     } else if (input.competition === 4) {
       risks.push({
         key: "competition",
         severity: "moderate",
         label: "Competencia alta",
-        text: "Hay presión competitiva. Necesitás diferenciar oferta, ángulo creativo o canal de adquisición.",
+        text: "Diferenciá oferta o canal.",
       });
     } else if (input.competition === 3 && components.margin < 75) {
       risks.push({
         key: "competition",
         severity: "watch",
         label: "Competencia media",
-        text: "No bloquea el test, pero reduce margen de error si el producto no tiene una promesa clara.",
+        text: "La promesa debe ser clara.",
       });
     }
 
@@ -256,21 +270,21 @@
         key: "complexity",
         severity: "critical",
         label: "Operación muy compleja",
-        text: "Despacho, soporte, devoluciones o control de calidad pueden convertir un buen margen teórico en bajo margen real.",
+        text: "Puede destruir margen real.",
       });
     } else if (input.complexity === 4) {
       risks.push({
         key: "complexity",
         severity: "moderate",
         label: "Operación compleja",
-        text: "La complejidad no descarta el producto, pero pide un test chico para medir problemas operativos temprano.",
+        text: "Medí fricción temprano.",
       });
     } else if (input.complexity === 3 && input.demand <= 3) {
       risks.push({
         key: "complexity",
         severity: "watch",
-        label: "Fricción operativa media",
-        text: "La operación es manejable, aunque no conviene sobredimensionar stock antes de validar demanda.",
+        label: "Operación media",
+        text: "No compres stock grande.",
       });
     }
 
@@ -278,8 +292,8 @@
       risks.push({
         key: "execution",
         severity: "watch",
-        label: "Riesgo de ejecución",
-        text: "No hay bloqueos fuertes. El mayor riesgo pasa por ejecutar mal el test: mala audiencia, creatividad débil o presupuesto sin métrica clara.",
+        label: "Ejecución",
+        text: "Definí oferta, audiencia y métrica.",
       });
     }
 
@@ -287,8 +301,8 @@
       risks.push({
         key: "data-quality",
         severity: "watch",
-        label: "Calidad de datos",
-        text: "Antes de decidir, confirmá las alertas de carga para no basar el score en costos incompletos.",
+        label: "Datos a confirmar",
+        text: "El score puede cambiar.",
       });
     }
 
@@ -306,21 +320,21 @@
       const floor = input.competition <= 3 && input.complexity <= 3 ? 74 : 68;
       if (adjustedScore < floor) {
         adjustedScore = floor;
-        explanation = "El score se eleva porque el margen es fuerte y no hay riesgos críticos; el límite pasa por validar demanda/oferta, no por rentabilidad.";
+        explanation = "Margen fuerte: el límite es demanda/oferta.";
       }
     }
 
     if (marginPercent >= 80 && alerts.some((alert) => alert.severity === "warning")) {
       adjustedScore = Math.min(adjustedScore, 78);
-      explanation = "El margen empuja el score, pero se limita hasta confirmar que los costos cargados son reales.";
+      explanation = "Score limitado hasta confirmar costos.";
     }
 
     if (hasCriticalAlert) {
       adjustedScore = Math.min(adjustedScore, 35);
-      explanation = "El score queda limitado porque hay datos críticos para corregir antes de decidir.";
+      explanation = "Score limitado por datos incoherentes.";
     } else if (hasCriticalRisk) {
       adjustedScore = Math.min(adjustedScore, 64);
-      explanation = "El score queda limitado por un riesgo crítico que puede bloquear el aprendizaje del test.";
+      explanation = "Score limitado por riesgo crítico.";
     }
 
     return {
@@ -332,28 +346,28 @@
   function getScoreBlockers(components, risks, alerts) {
     const blockers = [];
 
-    if (alerts.length > 0) {
-      blockers.push("la confiabilidad de los datos cargados");
+    if (alerts.some((alert) => alert.severity !== "info")) {
+      blockers.push("datos a confirmar");
     }
 
     if (components.demand < 50) {
-      blockers.push("demanda estimada baja");
+      blockers.push("demanda");
     }
 
     if (components.competition < 50) {
-      blockers.push("presión competitiva");
+      blockers.push("competencia");
     }
 
     if (components.complexity < 50) {
-      blockers.push("fricción operativa");
+      blockers.push("operación");
     }
 
     if (components.margin < 70) {
-      blockers.push("margen insuficiente para absorber errores");
+      blockers.push("margen");
     }
 
     if (blockers.length === 0 && risks.length > 0) {
-      blockers.push("riesgos moderados de ejecución");
+      blockers.push("ejecución");
     }
 
     return blockers;
@@ -363,26 +377,21 @@
     const marginLabel = getMarginLabel(marginPercent);
     const demandLabel = getDemandLabel(input.demand);
     const competitionLabel = getPressureLabel(input.competition);
-    const complexityLabel = getPressureLabel(input.complexity);
     const blockers = getScoreBlockers(components, risks, alerts);
     const base =
       score >= 72
-        ? `El producto queda en zona testeable: margen ${marginLabel}, demanda ${demandLabel} y sin bloqueos críticos.`
+        ? `Testeable: margen ${marginLabel}, demanda ${demandLabel}.`
         : score >= 50
-          ? `El producto queda en zona de ajuste: margen ${marginLabel}, demanda ${demandLabel}, competencia ${competitionLabel} y complejidad ${complexityLabel}.`
-          : `El producto queda débil para testear: margen ${marginLabel} y variables de mercado/operación con poco margen de error.`;
+          ? `Ajustar: margen ${marginLabel}, demanda ${demandLabel}, competencia ${competitionLabel}.`
+          : "Débil: bajo potencial para test pago.";
 
     const details = [
-      `Margen bruto: ${marginPercent.toFixed(1)}%. Demanda: ${input.demand}/5. Competencia: ${input.competition}/5. Complejidad: ${input.complexity}/5.`,
-      `Lo que más frena el score: ${blockers.join(", ")}.`,
+      `Variables: margen ${marginPercent.toFixed(1)}%, demanda ${input.demand}/5, competencia ${input.competition}/5, complejidad ${input.complexity}/5.`,
+      `Frena: ${blockers.join(", ")}.`,
     ];
 
     if (adjustmentExplanation) {
       details.push(adjustmentExplanation);
-    }
-
-    if (alerts.length > 0) {
-      details.push("Primero revisá las alertas de carga: pueden cambiar la decisión final.");
     }
 
     return {
@@ -391,95 +400,110 @@
     };
   }
 
+  function addRecommendation(recommendations, title, text, priority) {
+    if (recommendations.some((item) => item.title === title)) {
+      return;
+    }
+
+    recommendations.push({ title, text, priority });
+  }
+
   function getRecommendations(input, marginPercent, score, risks, alerts) {
     const recommendations = [];
     const riskKeys = risks.map((item) => item.key);
+    const alertKeys = alerts.map((item) => item.key);
+    const hasCriticalAlert = alerts.some((alert) => alert.severity === "critical");
+    const hasIncoherentData = alerts.some((alert) => alert.key === "incoherent");
 
-    if (alerts.length > 0) {
-      recommendations.push({
-        title: "Corregir datos",
-        text: "Confirmá costos, envío, comisiones y precio real de mercado antes de usar el resultado como decisión.",
-        priority: "Alta",
-      });
+    if (score >= 72 && alerts.length === 0) {
+      addRecommendation(recommendations, "Lanzar test controlado", "Medí conversión con presupuesto acotado.", "Alta");
+    }
+
+    if (hasIncoherentData) {
+      addRecommendation(recommendations, "Corregir datos", "Revisá precio y costos base.", "Alta");
+    }
+
+    if (alertKeys.includes("costs") || alertKeys.includes("incomplete")) {
+      addRecommendation(recommendations, "Confirmar costos", "Incluí envío, comisiones e impuestos.", "Alta");
+    }
+
+    if (hasCriticalAlert) {
+      return recommendations;
+    }
+
+    if (alertKeys.includes("price")) {
+      addRecommendation(recommendations, "Revisar precio final", "Compará contra alternativas reales.", "Alta");
+    }
+
+    if (alertKeys.includes("demand") || riskKeys.includes("demand") || score < 50) {
+      addRecommendation(recommendations, "Validar demanda", "Probá anuncio, preventa o landing.", "Alta");
     }
 
     if (marginPercent < 35 || riskKeys.includes("margin")) {
-      recommendations.push({
-        title: "Mejorar margen",
-        text: "Probá subir precio o bajar costo. Si el score mejora fuerte, la oportunidad depende principalmente de unit economics.",
-        priority: "Alta",
-      });
+      addRecommendation(recommendations, "Mejorar margen", "Subí precio o bajá costo.", "Alta");
     }
 
     if (riskKeys.includes("competition")) {
-      recommendations.push({
-        title: "Mejorar oferta",
-        text: "Diferenciá con bundle, garantía, envío más rápido o una promesa más específica para no competir solo por precio.",
-        priority: "Media",
-      });
-    }
-
-    if (riskKeys.includes("demand") || score < 50) {
-      recommendations.push({
-        title: "Validar demanda antes",
-        text: "Buscá señales externas: búsquedas, competidores vendiendo, comunidades activas o preventa simple antes de pauta paga.",
-        priority: "Alta",
-      });
+      addRecommendation(recommendations, "Diferenciar oferta", "Bundle, garantía o mejor ángulo.", "Media");
     }
 
     if (riskKeys.includes("complexity")) {
-      recommendations.push({
-        title: "Simplificar operación",
-        text: "Reducí variantes, empaque, peso o pasos de despacho para que el test mida demanda y no problemas operativos.",
-        priority: "Media",
-      });
+      addRecommendation(recommendations, "Simplificar operación", "Reducí variantes y fricción.", "Media");
     }
 
     if (recommendations.length === 0) {
-      recommendations.push({
-        title: "Lanzar test controlado",
-        text: "Testeá con presupuesto acotado, una oferta clara y una métrica principal de conversión o costo por compra.",
-        priority: "Alta",
-      });
+      addRecommendation(recommendations, "Lanzar test controlado", "Medí conversión con presupuesto acotado.", "Alta");
     }
 
-    return recommendations;
+    return recommendations.slice(0, 4);
   }
 
   function getSuggestedPlan(score, classification, risks, alerts) {
     const hasCriticalAlert = alerts.some((alert) => alert.severity === "critical");
+    const hasIncoherentData = alerts.some((alert) => alert.key === "incoherent");
     const hasWarningAlert = alerts.some((alert) => alert.severity === "warning");
     const hasCriticalRisk = risks.some((risk) => risk.severity === "critical");
-    const hasModerateRisk = risks.some((risk) => risk.severity === "moderate");
 
     if (hasCriticalAlert) {
       return {
-        title: "No decidir todavía",
-        stance: "Prudencia máxima",
-        text: "Corregí los datos críticos y recalculá. Con inputs incompletos, cualquier test puede dar una señal falsa.",
+        title: "No testear todavía",
+        stance: "Pausar",
+        budget: "$0",
+        scope: hasIncoherentData ? "Corregir datos" : "Confirmar costos",
+        metric: "Margen real",
+        condition: "Recalcular con costos válidos",
       };
     }
 
     if (classification.label === "DESCARTAR" || hasCriticalRisk) {
       return {
-        title: "Descartar o validar sin stock",
+        title: "Validación sin stock",
         stance: "Muy prudente",
-        text: "No conviene comprar inventario. Si querés aprender algo, hacé preventa, encuesta o landing sin compromiso de stock.",
+        budget: "$10-$30",
+        scope: "Landing, encuesta o preventa",
+        metric: "Interés / leads",
+        condition: "Escalar solo con demanda clara",
       };
     }
 
     if (classification.label === "AJUSTAR ANTES") {
       return {
-        title: "Test corto con compra pequeña",
-        stance: hasModerateRisk || hasWarningAlert ? "Prudente" : "Moderada",
-        text: "Ajustá la variable principal y testeá 3 a 7 días con pocas unidades, presupuesto bajo y una métrica de corte definida.",
+        title: "Test corto",
+        stance: hasWarningAlert ? "Prudente" : "Moderada",
+        budget: "$30-$80",
+        scope: "5-15 unidades o 3-7 días",
+        metric: "Costo por compra",
+        condition: "Escalar si hay ventas; frenar si no hay intención",
       };
     }
 
     return {
-      title: "Test comercial controlado",
-      stance: score >= 82 && !hasWarningAlert ? "Más agresiva" : "Moderada",
-      text: "Podés lanzar un test real con stock limitado, 1 a 2 ofertas y presupuesto suficiente para medir conversión sin sobredimensionar compra.",
+      title: "Test comercial",
+      stance: score >= 82 ? "Más agresiva" : "Controlada",
+      budget: "$80-$200",
+      scope: "15-30 unidades o 7 días",
+      metric: "Conversión / ROAS",
+      condition: "Escalar si margen neto sostiene pauta",
     };
   }
 

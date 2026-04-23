@@ -11,7 +11,10 @@ const riskList = document.querySelector("#risk-list");
 const recommendationsList = document.querySelector("#recommendations-list");
 const planStance = document.querySelector("#plan-stance");
 const planName = document.querySelector("#plan-name");
-const planDescription = document.querySelector("#plan-description");
+const planBudget = document.querySelector("#plan-budget");
+const planScope = document.querySelector("#plan-scope");
+const planMetric = document.querySelector("#plan-metric");
+const planCondition = document.querySelector("#plan-condition");
 const simulatePriceButton = document.querySelector("#simulate-price-button");
 const simulateCostButton = document.querySelector("#simulate-cost-button");
 const componentBars = {
@@ -129,7 +132,10 @@ function renderRecommendations(items) {
 function renderPlan(plan) {
   planStance.textContent = plan.stance;
   planName.textContent = plan.title;
-  planDescription.textContent = plan.text;
+  planBudget.textContent = plan.budget;
+  planScope.textContent = plan.scope;
+  planMetric.textContent = plan.metric;
+  planCondition.textContent = plan.condition;
 }
 
 function renderResult(result) {
